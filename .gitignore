@@ -1,0 +1,36 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# H2 database files
+data/
+*.db
+*.mv.db
+*.trace.db
+
+# Secrets / local config
+.env
+*.env
+application-local.yml
+application-local.yaml
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.suo
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
