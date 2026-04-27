@@ -1,6 +1,8 @@
 import axios from 'axios';
 import type { ApiResponse, MqConnectionRequest, MqConnectionResponse, MqTestConnectionRequest,
-  QueueInfoResponse, MessageSummaryResponse, MessageDetailResponse, AuditLogEntry } from '../types';
+  QueueInfoResponse, MessageSummaryResponse, MessageDetailResponse, AuditLogEntry,
+  CoherenceServerRequest, CoherenceServerResponse, CoherenceStatusResponse,
+  MskConfigRequest, MskConfigResponse, KafkaTopicInfo, KafkaMessageRecord } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -74,6 +76,48 @@ export const mqApi = {
   // Health & audit
   health: () => api.get<ApiResponse<{ status: string; activeConnections: number }>>('/mq/health'),
   getAuditLog: () => api.get<ApiResponse<AuditLogEntry[]>>('/mq/audit'),
+
+  // MSK Kafka
+  msk: {
+    listConfigs: () =>
+      api.get<ApiResponse<MskConfigResponse[]>>('/msk/configs'),
+    createConfig: (data: MskConfigRequest) =>
+      api.post<ApiResponse<MskConfigResponse>>('/msk/configs', data),
+    updateConfig: (id: number, data: MskConfigRequest) =>
+      api.put<ApiResponse<MskConfigResponse>>(`/msk/configs/${id}`, data),
+    deleteConfig: (id: number) =>
+      api.delete<ApiResponse<void>>(`/msk/configs/${id}`),
+    testConnection: (data: MskConfigRequest) =>
+      api.post<ApiResponse<string>>('/msk/configs/test', data),
+    listTopics: (configId: number, includeInternal = false) =>
+      api.get<ApiResponse<KafkaTopicInfo[]>>(
+        `/msk/configs/${configId}/topics?includeInternal=${includeInternal}`
+      ),
+    browseMessages: (configId: number, topic: string, limit = 50) =>
+      api.get<ApiResponse<KafkaMessageRecord[]>>(
+        `/msk/configs/${configId}/topics/${encodeURIComponent(topic)}/messages?limit=${limit}`
+      ),
+  },
+
+  // Coherence servers
+  coherence: {
+    listServers: () =>
+      api.get<ApiResponse<CoherenceServerResponse[]>>('/coherence/servers'),
+    createServer: (data: CoherenceServerRequest) =>
+      api.post<ApiResponse<CoherenceServerResponse>>('/coherence/servers', data),
+    updateServer: (id: number, data: CoherenceServerRequest) =>
+      api.put<ApiResponse<CoherenceServerResponse>>(`/coherence/servers/${id}`, data),
+    deleteServer: (id: number) =>
+      api.delete<ApiResponse<void>>(`/coherence/servers/${id}`),
+    checkStatus: (id: number) =>
+      api.get<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/status`),
+    stopService: (id: number) =>
+      api.post<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/stop`),
+    restartService: (id: number) =>
+      api.post<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/restart`),
+    testSsh: (data: CoherenceServerRequest) =>
+      api.post<ApiResponse<string>>('/coherence/servers/test-ssh', data),
+  },
 };
 
 export default api;

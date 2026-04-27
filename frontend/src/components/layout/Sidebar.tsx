@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Settings, Database, FileSearch } from 'lucide-react';
+import { LayoutDashboard, Settings, Database, FileSearch, ServerCog, Layers } from 'lucide-react';
 import { useConnectionStore } from '../../store/connectionStore';
 import clsx from 'clsx';
 
@@ -7,6 +7,8 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/config', label: 'Configuration', icon: Settings, exact: false },
   { to: '/queues', label: 'Queues', icon: Database, exact: false },
+  { to: '/coherence', label: 'Coherence', icon: ServerCog, exact: false },
+  { to: '/msk', label: 'MSK Kafka', icon: Layers, exact: false },
 ];
 
 export default function Sidebar() {

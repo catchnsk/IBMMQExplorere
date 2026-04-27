@@ -102,6 +102,95 @@ export interface MessageDetailResponse {
   hexView?: string;
 }
 
+// ── MSK Kafka types ────────────────────────────────────────────────────────
+
+export type MskAuthType = 'NONE' | 'SSL' | 'SASL_SCRAM' | 'IAM';
+
+export interface MskConfigRequest {
+  configName: string;
+  bootstrapServers: string;
+  awsRegion?: string;
+  authType: MskAuthType;
+  saslUsername?: string;
+  saslPassword?: string;
+  accessKey?: string;
+  secretKey?: string;
+}
+
+export interface MskConfigResponse {
+  id: number;
+  configName: string;
+  bootstrapServers: string;
+  awsRegion?: string;
+  authType: MskAuthType;
+  saslUsername?: string;
+  hasSaslPassword: boolean;
+  hasIamCredentials: boolean;
+  enabled: boolean;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface KafkaTopicInfo {
+  name: string;
+  partitions: number;
+  replicationFactor: number;
+  totalMessages: number;
+  latestOffset: number;
+  internal: boolean;
+}
+
+export interface KafkaMessageRecord {
+  partition: number;
+  offset: number;
+  timestamp?: string;
+  key?: string;
+  value?: string;
+  valueType: 'TEXT' | 'JSON' | 'BINARY';
+  valueSize: number;
+  headers?: Record<string, string>;
+}
+
+// ── Coherence types ────────────────────────────────────────────────────────
+
+export type CoherenceEnvironment = 'DEV' | 'QA' | 'QA03' | 'PERF';
+export type CoherenceServerType = 'CORE_CACHE' | 'DB_SERVER';
+export type CoherenceServiceStatus = 'RUNNING' | 'STOPPED' | 'UNKNOWN' | 'ERROR';
+
+export interface CoherenceServerResponse {
+  id: number;
+  displayName: string;
+  host: string;
+  sshPort: number;
+  username: string;
+  hasPassword: boolean;
+  environment: CoherenceEnvironment;
+  serverType: CoherenceServerType;
+  serviceName: string;
+  enabled: boolean;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface CoherenceServerRequest {
+  displayName: string;
+  host: string;
+  sshPort?: number;
+  username: string;
+  password?: string;
+  environment: CoherenceEnvironment;
+  serverType: CoherenceServerType;
+  serviceName?: string;
+}
+
+export interface CoherenceStatusResponse {
+  serverId: number;
+  host: string;
+  status: CoherenceServiceStatus;
+  details?: string;
+  checkedAt: string;
+}
+
 export interface AuditLogEntry {
   id: number;
   username: string;
