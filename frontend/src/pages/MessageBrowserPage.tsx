@@ -40,7 +40,7 @@ export default function MessageBrowserPage() {
     <div className="h-full flex flex-col space-y-4" style={{ height: 'calc(100vh - 160px)' }}>
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/queues')}
+          <button onClick={() => navigate('/ibm-mq/queues')}
             className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
             <ArrowLeft className="w-5 h-5" />
           </button>

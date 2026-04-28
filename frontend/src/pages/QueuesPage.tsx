@@ -101,7 +101,7 @@ export default function QueuesPage() {
                   <tr
                     key={queue.name}
                     className="hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/queues/${encodeURIComponent(queue.name)}`)}
+                    onClick={() => navigate(`/ibm-mq/queues/${encodeURIComponent(queue.name)}`)}
                   >
                     <td className="table-cell font-mono text-blue-600 dark:text-blue-400 font-medium">
                       {queue.name}

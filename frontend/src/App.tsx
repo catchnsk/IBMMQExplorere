@@ -3,6 +3,7 @@ import { useAuthStore } from './store/authStore';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import IbmMqPage from './pages/IbmMqPage';
 import ConfigPage from './pages/ConfigPage';
 import QueuesPage from './pages/QueuesPage';
 import MessageBrowserPage from './pages/MessageBrowserPage';
@@ -26,9 +27,13 @@ export default function App() {
           </ProtectedRoute>
         }>
           <Route index element={<DashboardPage />} />
-          <Route path="config" element={<ConfigPage />} />
-          <Route path="queues" element={<QueuesPage />} />
-          <Route path="queues/:queueName" element={<MessageBrowserPage />} />
+          <Route path="ibm-mq" element={<IbmMqPage />}>
+            <Route index element={<ConfigPage />} />
+            <Route path="queues" element={<QueuesPage />} />
+            <Route path="queues/:queueName" element={<MessageBrowserPage />} />
+          </Route>
+          <Route path="config" element={<Navigate to="/ibm-mq" replace />} />
+          <Route path="queues" element={<Navigate to="/ibm-mq/queues" replace />} />
           <Route path="coherence" element={<CoherencePage />} />
           <Route path="msk" element={<MskPage />} />
         </Route>
