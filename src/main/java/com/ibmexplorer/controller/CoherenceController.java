@@ -31,6 +31,9 @@ public class CoherenceController {
     private final EncryptionService encryptionService;
     private final AuditLogService auditLogService;
 
+    private static final String DEFAULT_SCRIPT_BASE = "/apps/bwag/applications/coherence";
+    private static final String DEFAULT_SCRIPT_INSTANCE = "999";
+
     @GetMapping("/servers")
     public ResponseEntity<ApiResponse<List<CoherenceServerResponse>>> listAll() {
         List<CoherenceServerResponse> servers = serverRepo
@@ -44,7 +47,6 @@ public class CoherenceController {
     public ResponseEntity<ApiResponse<CoherenceServerResponse>> create(
             @Valid @RequestBody CoherenceServerRequest req,
             Authentication auth, HttpServletRequest httpReq) {
-
         CoherenceServerEntity entity = buildEntity(req, auth.getName());
         CoherenceServerEntity saved = serverRepo.save(entity);
         return ResponseEntity.ok(ApiResponse.success(mapToResponse(saved), "Server added"));
@@ -66,8 +68,8 @@ public class CoherenceController {
         existing.setUsername(req.getUsername());
         existing.setEnvironment(req.getEnvironment());
         existing.setServerType(req.getServerType());
-        existing.setServiceName(req.getServiceName() != null && !req.getServiceName().isBlank()
-            ? req.getServiceName() : "coherence");
+        existing.setScriptBasePath(notBlank(req.getScriptBasePath(), DEFAULT_SCRIPT_BASE));
+        existing.setScriptInstance(notBlank(req.getScriptInstance(), DEFAULT_SCRIPT_INSTANCE));
 
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
             existing.setEncryptedPassword(encryptionService.encrypt(req.getPassword()));
@@ -99,30 +101,30 @@ public class CoherenceController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CoherenceStatusResponse>> stopService(
             @PathVariable Long id, Authentication auth, HttpServletRequest httpReq) {
-
         CoherenceServerEntity server = serverRepo.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
         CoherenceStatusResponse result = sshService.stopService(server);
         auditLogService.log(auth.getName(), AuditAction.COHERENCE_STOP, null,
-            server.getHost(), result.getStatus().name(), server.getServiceName(), getClientIp(httpReq));
+            server.getHost(), result.getStatus().name(),
+            CoherenceSshService.scriptDir(server), getClientIp(httpReq));
         return ResponseEntity.ok(ApiResponse.success(result,
             result.getStatus() == CoherenceStatusResponse.ServiceStatus.STOPPED
-                ? "Service stopped successfully" : "Stop command sent, check status"));
+                ? "Service stopped" : "stop.sh executed — check status"));
     }
 
-    @PostMapping("/servers/{id}/restart")
+    @PostMapping("/servers/{id}/start")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CoherenceStatusResponse>> restartService(
+    public ResponseEntity<ApiResponse<CoherenceStatusResponse>> startService(
             @PathVariable Long id, Authentication auth, HttpServletRequest httpReq) {
-
         CoherenceServerEntity server = serverRepo.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
-        CoherenceStatusResponse result = sshService.restartService(server);
-        auditLogService.log(auth.getName(), AuditAction.COHERENCE_RESTART, null,
-            server.getHost(), result.getStatus().name(), server.getServiceName(), getClientIp(httpReq));
+        CoherenceStatusResponse result = sshService.startService(server);
+        auditLogService.log(auth.getName(), AuditAction.COHERENCE_START, null,
+            server.getHost(), result.getStatus().name(),
+            CoherenceSshService.scriptDir(server), getClientIp(httpReq));
         return ResponseEntity.ok(ApiResponse.success(result,
             result.getStatus() == CoherenceStatusResponse.ServiceStatus.RUNNING
-                ? "Service restarted successfully" : "Restart command sent, check status"));
+                ? "Service started" : "start.sh executed — check status"));
     }
 
     @PostMapping("/servers/test-ssh")
@@ -139,6 +141,8 @@ public class CoherenceController {
         }
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private CoherenceServerEntity buildEntity(CoherenceServerRequest req, String createdBy) {
         CoherenceServerEntity entity = CoherenceServerEntity.builder()
             .displayName(req.getDisplayName())
@@ -147,8 +151,8 @@ public class CoherenceController {
             .username(req.getUsername())
             .environment(req.getEnvironment())
             .serverType(req.getServerType())
-            .serviceName(req.getServiceName() != null && !req.getServiceName().isBlank()
-                ? req.getServiceName() : "coherence")
+            .scriptBasePath(notBlank(req.getScriptBasePath(), DEFAULT_SCRIPT_BASE))
+            .scriptInstance(notBlank(req.getScriptInstance(), DEFAULT_SCRIPT_INSTANCE))
             .createdBy(createdBy)
             .build();
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
@@ -167,11 +171,17 @@ public class CoherenceController {
             .hasPassword(e.getEncryptedPassword() != null && !e.getEncryptedPassword().isBlank())
             .environment(e.getEnvironment())
             .serverType(e.getServerType())
-            .serviceName(e.getServiceName())
+            .scriptBasePath(e.getScriptBasePath())
+            .scriptInstance(e.getScriptInstance())
+            .scriptDir(CoherenceSshService.scriptDir(e))
             .enabled(e.getEnabled())
             .createdAt(e.getCreatedAt())
             .createdBy(e.getCreatedBy())
             .build();
+    }
+
+    private String notBlank(String value, String fallback) {
+        return (value != null && !value.isBlank()) ? value : fallback;
     }
 
     private String getClientIp(HttpServletRequest req) {

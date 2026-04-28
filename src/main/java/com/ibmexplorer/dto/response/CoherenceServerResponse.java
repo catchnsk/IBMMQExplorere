@@ -21,7 +21,9 @@ public class CoherenceServerResponse {
     private boolean hasPassword;
     private Environment environment;
     private ServerType serverType;
-    private String serviceName;
+    private String scriptBasePath;
+    private String scriptInstance;
+    private String scriptDir;   // computed: {scriptBasePath}/{scriptInstance}/bin
     private boolean enabled;
     private LocalDateTime createdAt;
     private String createdBy;

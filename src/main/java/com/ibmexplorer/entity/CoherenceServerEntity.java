@@ -45,9 +45,13 @@ public class CoherenceServerEntity {
     @Column(nullable = false, length = 15)
     private ServerType serverType;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 255)
     @Builder.Default
-    private String serviceName = "coherence";
+    private String scriptBasePath = "/apps/bwag/applications/coherence";
+
+    @Column(nullable = false, length = 50)
+    @Builder.Default
+    private String scriptInstance = "999";
 
     @Column(nullable = false)
     @Builder.Default

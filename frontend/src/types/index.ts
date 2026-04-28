@@ -166,7 +166,9 @@ export interface CoherenceServerResponse {
   hasPassword: boolean;
   environment: CoherenceEnvironment;
   serverType: CoherenceServerType;
-  serviceName: string;
+  scriptBasePath: string;
+  scriptInstance: string;
+  scriptDir: string;   // computed by backend: {scriptBasePath}/{scriptInstance}/bin
   enabled: boolean;
   createdAt: string;
   createdBy?: string;
@@ -180,7 +182,8 @@ export interface CoherenceServerRequest {
   password?: string;
   environment: CoherenceEnvironment;
   serverType: CoherenceServerType;
-  serviceName?: string;
+  scriptBasePath?: string;
+  scriptInstance?: string;
 }
 
 export interface CoherenceStatusResponse {

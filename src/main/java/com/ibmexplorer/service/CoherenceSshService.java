@@ -23,15 +23,16 @@ public class CoherenceSshService {
 
     private static final int SSH_TIMEOUT_MS = 15_000;
 
+    // ── Public operations ─────────────────────────────────────────────────────
+
     public CoherenceStatusResponse checkStatus(CoherenceServerEntity server) {
-        String cmd = "systemctl is-active " + server.getServiceName() + " 2>&1";
+        String script = scriptPath(server, "status.sh");
+        String cmd = "bash " + script + " 2>&1; echo \"EXITCODE:$?\"";
         try {
-            String output = executeCommand(server, cmd).trim();
-            ServiceStatus status = switch (output.toLowerCase()) {
-                case "active" -> ServiceStatus.RUNNING;
-                case "inactive", "failed", "dead" -> ServiceStatus.STOPPED;
-                default -> ServiceStatus.UNKNOWN;
-            };
+            String raw = executeCommand(server, cmd);
+            boolean exited0 = raw.contains("EXITCODE:0");
+            String output = sanitize(raw);
+            ServiceStatus status = resolveStatus(exited0, output);
             return buildResponse(server, status, output);
         } catch (Exception e) {
             log.warn("SSH status check failed for {}: {}", server.getHost(), e.getMessage());
@@ -40,27 +41,29 @@ public class CoherenceSshService {
     }
 
     public CoherenceStatusResponse stopService(CoherenceServerEntity server) {
-        String cmd = "sudo systemctl stop " + server.getServiceName() + " 2>&1; echo \"EXITCODE:$?\"";
+        String script = scriptPath(server, "stop.sh");
+        String cmd = "bash " + script + " 2>&1; echo \"EXITCODE:$?\"";
         try {
-            String output = executeCommand(server, cmd);
-            boolean success = output.contains("EXITCODE:0");
-            ServiceStatus status = success ? ServiceStatus.STOPPED : ServiceStatus.ERROR;
-            return buildResponse(server, status, sanitizeOutput(output));
+            String raw = executeCommand(server, cmd);
+            boolean success = raw.contains("EXITCODE:0");
+            return buildResponse(server,
+                success ? ServiceStatus.STOPPED : ServiceStatus.ERROR, sanitize(raw));
         } catch (Exception e) {
             log.warn("SSH stop failed for {}: {}", server.getHost(), e.getMessage());
             return buildResponse(server, ServiceStatus.ERROR, "SSH error: " + e.getMessage());
         }
     }
 
-    public CoherenceStatusResponse restartService(CoherenceServerEntity server) {
-        String cmd = "sudo systemctl restart " + server.getServiceName() + " 2>&1; echo \"EXITCODE:$?\"";
+    public CoherenceStatusResponse startService(CoherenceServerEntity server) {
+        String script = scriptPath(server, "start.sh");
+        String cmd = "bash " + script + " 2>&1; echo \"EXITCODE:$?\"";
         try {
-            String output = executeCommand(server, cmd);
-            boolean success = output.contains("EXITCODE:0");
-            ServiceStatus status = success ? ServiceStatus.RUNNING : ServiceStatus.ERROR;
-            return buildResponse(server, status, sanitizeOutput(output));
+            String raw = executeCommand(server, cmd);
+            boolean success = raw.contains("EXITCODE:0");
+            return buildResponse(server,
+                success ? ServiceStatus.RUNNING : ServiceStatus.ERROR, sanitize(raw));
         } catch (Exception e) {
-            log.warn("SSH restart failed for {}: {}", server.getHost(), e.getMessage());
+            log.warn("SSH start failed for {}: {}", server.getHost(), e.getMessage());
             return buildResponse(server, ServiceStatus.ERROR, "SSH error: " + e.getMessage());
         }
     }
@@ -70,6 +73,43 @@ public class CoherenceSshService {
         return true;
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Full path to a script: {basePath}/{instance}/bin/{script} */
+    public static String scriptDir(CoherenceServerEntity server) {
+        String base = server.getScriptBasePath().replaceAll("/+$", "");
+        return base + "/" + server.getScriptInstance() + "/bin";
+    }
+
+    private String scriptPath(CoherenceServerEntity server, String scriptFile) {
+        return scriptDir(server) + "/" + scriptFile;
+    }
+
+    private ServiceStatus resolveStatus(boolean exitedZero, String output) {
+        String lower = output.toLowerCase();
+        if (lower.contains("running") || lower.contains("started")) return ServiceStatus.RUNNING;
+        if (lower.contains("stopped") || lower.contains("not running")
+                || lower.contains("inactive") || lower.contains("dead")) return ServiceStatus.STOPPED;
+        return exitedZero ? ServiceStatus.RUNNING : ServiceStatus.STOPPED;
+    }
+
+    private String sanitize(String raw) {
+        return raw.replaceAll("EXITCODE:\\d+", "").trim();
+    }
+
+    private CoherenceStatusResponse buildResponse(CoherenceServerEntity server,
+                                                   ServiceStatus status, String details) {
+        return CoherenceStatusResponse.builder()
+            .serverId(server.getId())
+            .host(server.getHost())
+            .status(status)
+            .details(details)
+            .checkedAt(LocalDateTime.now())
+            .build();
+    }
+
+    // ── SSH execution ─────────────────────────────────────────────────────────
+
     private String executeCommand(CoherenceServerEntity server, String command) throws Exception {
         JSch jsch = new JSch();
         Session session = null;
@@ -77,9 +117,7 @@ public class CoherenceSshService {
         try {
             session = jsch.getSession(server.getUsername(), server.getHost(), server.getSshPort());
             String password = encryptionService.decrypt(server.getEncryptedPassword());
-            if (password != null) {
-                session.setPassword(password);
-            }
+            if (password != null) session.setPassword(password);
             session.setConfig("StrictHostKeyChecking", "no");
             session.setConfig("PreferredAuthentications", "password,keyboard-interactive");
             session.setTimeout(SSH_TIMEOUT_MS);
@@ -106,21 +144,5 @@ public class CoherenceSshService {
             if (channel != null && channel.isConnected()) channel.disconnect();
             if (session != null && session.isConnected()) session.disconnect();
         }
-    }
-
-    private CoherenceStatusResponse buildResponse(CoherenceServerEntity server,
-                                                   ServiceStatus status, String details) {
-        return CoherenceStatusResponse.builder()
-            .serverId(server.getId())
-            .host(server.getHost())
-            .status(status)
-            .details(details)
-            .checkedAt(LocalDateTime.now())
-            .build();
-    }
-
-    private String sanitizeOutput(String output) {
-        // Remove the EXITCODE marker before returning to the client
-        return output.replaceAll("EXITCODE:\\d+", "").trim();
     }
 }

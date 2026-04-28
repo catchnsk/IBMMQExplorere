@@ -113,8 +113,8 @@ export const mqApi = {
       api.get<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/status`),
     stopService: (id: number) =>
       api.post<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/stop`),
-    restartService: (id: number) =>
-      api.post<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/restart`),
+    startService: (id: number) =>
+      api.post<ApiResponse<CoherenceStatusResponse>>(`/coherence/servers/${id}/start`),
     testSsh: (data: CoherenceServerRequest) =>
       api.post<ApiResponse<string>>('/coherence/servers/test-ssh', data),
   },

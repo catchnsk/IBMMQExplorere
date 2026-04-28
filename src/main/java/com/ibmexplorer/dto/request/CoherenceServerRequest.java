@@ -28,5 +28,7 @@ public class CoherenceServerRequest {
     @NotNull
     private ServerType serverType;
 
-    private String serviceName;
+    private String scriptBasePath;
+
+    private String scriptInstance;
 }
