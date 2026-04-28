@@ -26,4 +26,5 @@ public class MskConfigRequest {
     // IAM fields (optional — env/instance profile used when blank)
     private String accessKey;
     private String secretKey;
+    private String sessionToken;  // for temporary credentials (STS / SSO / assumed role)
 }

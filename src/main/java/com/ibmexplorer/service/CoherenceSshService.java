@@ -75,10 +75,16 @@ public class CoherenceSshService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private static final String DEFAULT_BASE = "/apps/bwag/applications/coherence";
+    private static final String DEFAULT_INSTANCE = "999";
+
     /** Full path to a script: {basePath}/{instance}/bin/{script} */
     public static String scriptDir(CoherenceServerEntity server) {
-        String base = server.getScriptBasePath().replaceAll("/+$", "");
-        return base + "/" + server.getScriptInstance() + "/bin";
+        String base = (server.getScriptBasePath() != null && !server.getScriptBasePath().isBlank())
+            ? server.getScriptBasePath() : DEFAULT_BASE;
+        String instance = (server.getScriptInstance() != null && !server.getScriptInstance().isBlank())
+            ? server.getScriptInstance() : DEFAULT_INSTANCE;
+        return base.replaceAll("/+$", "") + "/" + instance + "/bin";
     }
 
     private String scriptPath(CoherenceServerEntity server, String scriptFile) {

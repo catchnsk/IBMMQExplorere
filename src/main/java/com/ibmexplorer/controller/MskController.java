@@ -65,6 +65,10 @@ public class MskController {
             existing.setEncryptedAccessKey(encryptionService.encrypt(req.getAccessKey()));
         if (hasValue(req.getSecretKey()))
             existing.setEncryptedSecretKey(encryptionService.encrypt(req.getSecretKey()));
+        if (hasValue(req.getSessionToken()))
+            existing.setEncryptedSessionToken(encryptionService.encrypt(req.getSessionToken()));
+        else if (req.getSessionToken() != null && req.getSessionToken().isEmpty())
+            existing.setEncryptedSessionToken(null);  // explicit clear when empty string sent
 
         MskConfigEntity saved = configRepo.save(existing);
         return ResponseEntity.ok(ApiResponse.success(mapToResponse(saved), "Configuration updated"));
@@ -146,6 +150,8 @@ public class MskController {
             e.setEncryptedAccessKey(encryptionService.encrypt(req.getAccessKey()));
         if (hasValue(req.getSecretKey()))
             e.setEncryptedSecretKey(encryptionService.encrypt(req.getSecretKey()));
+        if (hasValue(req.getSessionToken()))
+            e.setEncryptedSessionToken(encryptionService.encrypt(req.getSessionToken()));
         return e;
     }
 
@@ -159,6 +165,7 @@ public class MskController {
             .saslUsername(e.getSaslUsername())
             .hasSaslPassword(hasValue(e.getEncryptedSaslPassword()))
             .hasIamCredentials(hasValue(e.getEncryptedAccessKey()))
+            .hasSessionToken(hasValue(e.getEncryptedSessionToken()))
             .enabled(e.getEnabled())
             .createdAt(e.getCreatedAt())
             .createdBy(e.getCreatedBy())

@@ -115,6 +115,7 @@ export interface MskConfigRequest {
   saslPassword?: string;
   accessKey?: string;
   secretKey?: string;
+  sessionToken?: string;
 }
 
 export interface MskConfigResponse {
@@ -126,6 +127,7 @@ export interface MskConfigResponse {
   saslUsername?: string;
   hasSaslPassword: boolean;
   hasIamCredentials: boolean;
+  hasSessionToken: boolean;
   enabled: boolean;
   createdAt: string;
   createdBy?: string;

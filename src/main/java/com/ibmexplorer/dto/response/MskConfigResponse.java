@@ -20,6 +20,7 @@ public class MskConfigResponse {
     private String saslUsername;
     private boolean hasSaslPassword;
     private boolean hasIamCredentials;
+    private boolean hasSessionToken;
     private boolean enabled;
     private LocalDateTime createdAt;
     private String createdBy;

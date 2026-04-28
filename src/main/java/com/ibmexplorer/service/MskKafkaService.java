@@ -257,17 +257,30 @@ public class MskKafkaService {
 
         IAM_LOCK.lock();
         try {
-            String prevAccessKey = System.getProperty("aws.accessKeyId");
-            String prevSecretKey = System.getProperty("aws.secretAccessKey");
+            String prevAccessKey    = System.getProperty("aws.accessKeyId");
+            String prevSecretKey    = System.getProperty("aws.secretAccessKey");
+            String prevSessionToken = System.getProperty("aws.sessionToken");
+
             System.setProperty("aws.accessKeyId",
                 encryptionService.decrypt(config.getEncryptedAccessKey()));
             System.setProperty("aws.secretAccessKey",
                 encryptionService.decrypt(config.getEncryptedSecretKey()));
+
+            boolean hasToken = config.getEncryptedSessionToken() != null
+                && !config.getEncryptedSessionToken().isBlank();
+            if (hasToken) {
+                System.setProperty("aws.sessionToken",
+                    encryptionService.decrypt(config.getEncryptedSessionToken()));
+            } else {
+                System.clearProperty("aws.sessionToken");
+            }
+
             try {
                 return supplier.getUnchecked();
             } finally {
-                restoreProperty("aws.accessKeyId", prevAccessKey);
+                restoreProperty("aws.accessKeyId",    prevAccessKey);
                 restoreProperty("aws.secretAccessKey", prevSecretKey);
+                restoreProperty("aws.sessionToken",    prevSessionToken);
             }
         } finally {
             IAM_LOCK.unlock();

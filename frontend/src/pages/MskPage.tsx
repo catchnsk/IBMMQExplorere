@@ -20,7 +20,7 @@ const AUTH_LABELS: Record<MskAuthType, string> = {
 const defaultForm: MskConfigRequest = {
   configName: '', bootstrapServers: '', awsRegion: '',
   authType: 'NONE', saslUsername: '', saslPassword: '',
-  accessKey: '', secretKey: '',
+  accessKey: '', secretKey: '', sessionToken: '',
 };
 
 // ── Config modal ─────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ function ConfigModal({
           awsRegion: initial.awsRegion ?? '',
           authType: initial.authType,
           saslUsername: initial.saslUsername ?? '',
-          saslPassword: '', accessKey: '', secretKey: '',
+          saslPassword: '', accessKey: '', secretKey: '', sessionToken: '',
         }
       : { ...defaultForm }
   );
@@ -141,6 +141,19 @@ function ConfigModal({
                 <label className="label">Secret Access Key</label>
                 <input className="input-field" type="password" value={form.secretKey ?? ''}
                   onChange={e => set('secretKey', e.target.value)} />
+              </div>
+              <div>
+                <label className="label">
+                  Session Token&nbsp;
+                  <span className="text-gray-400 font-normal">
+                    — required for STS / SSO / assumed-role temporary credentials
+                    {isEdit && initial?.hasSessionToken && ' (blank = keep)'}
+                  </span>
+                </label>
+                <input className="input-field font-mono text-xs" type="password"
+                  value={form.sessionToken ?? ''}
+                  onChange={e => set('sessionToken', e.target.value)}
+                  placeholder="leave blank for long-term IAM credentials" />
               </div>
             </div>
           )}

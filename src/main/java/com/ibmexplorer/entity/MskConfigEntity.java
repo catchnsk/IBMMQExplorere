@@ -48,6 +48,10 @@ public class MskConfigEntity {
     @Column(length = 1024)
     private String encryptedSecretKey;
 
+    // Session token for temporary IAM credentials (STS / SSO / assumed role)
+    @Column(length = 2048)
+    private String encryptedSessionToken;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean enabled = true;
