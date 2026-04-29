@@ -21,7 +21,7 @@ const defaultForm: AmqServerRequest = {
   username: '', password: '',
   sshPort: 22, sshUsername: '', sshPassword: '',
   instanceUser: '', instanceName: '',
-  environment: 'QA', groupCategory: 'GROUP_A', brokerType: 'CLASSIC', useSsl: false,
+  environment: 'QA', groupCategory: 'GROUP_A', brokerType: 'ARTEMIS', useSsl: false,
 };
 
 export default function AmqPage() {
@@ -276,7 +276,10 @@ function ServerCard({ server, isAdmin, queueExpanded, onToggleQueues, onEdit, on
 
   const isBusy = statusFetching || stopMut.isPending || startMut.isPending;
   const scheme = server.useSsl ? 'https' : 'http';
-  const consoleUrl = `${scheme}://${server.host}:${server.managementPort}`;
+  const consoleBase = `${scheme}://${server.host}:${server.managementPort}`;
+  const consoleUrl = server.brokerType === 'ARTEMIS'
+    ? `${consoleBase}/console/auth/login`
+    : `${consoleBase}/admin`;
 
   const { data: queues, isLoading: queuesLoading, refetch: refetchQueues, isFetching: queuesFetching } =
     useQuery<AmqQueueInfo[]>({
@@ -557,10 +560,16 @@ function ServerModal({ form, setForm, isEdit, isSaving, isTesting, testResult, o
               </div>
             </div>
             {form.host && (
-              <p className="text-xs text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded">
-                {form.useSsl ? 'https' : 'http'}://{form.host}:{form.managementPort ?? 8161}
-                {form.brokerType === 'ARTEMIS' ? '/console/jolokia' : '/api/jolokia'}
-              </p>
+              <div className="text-xs font-mono bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded space-y-0.5 text-gray-400">
+                <div>Login: <span className="text-gray-600 dark:text-gray-300">
+                  {form.useSsl ? 'https' : 'http'}://{form.host}:{form.managementPort ?? 8161}
+                  {form.brokerType === 'ARTEMIS' ? '/console/auth/login' : '/admin'}
+                </span></div>
+                <div>Jolokia: <span className="text-gray-600 dark:text-gray-300">
+                  {form.useSsl ? 'https' : 'http'}://{form.host}:{form.managementPort ?? 8161}
+                  {form.brokerType === 'ARTEMIS' ? '/console/jolokia' : '/api/jolokia'}
+                </span></div>
+              </div>
             )}
           </div>
 
