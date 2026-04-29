@@ -7,6 +7,7 @@ import IbmMqPage from './pages/IbmMqPage';
 import ConfigPage from './pages/ConfigPage';
 import QueuesPage from './pages/QueuesPage';
 import MessageBrowserPage from './pages/MessageBrowserPage';
+import AmqPage from './pages/AmqPage';
 import CoherencePage from './pages/CoherencePage';
 import MskPage from './pages/MskPage';
 
@@ -34,6 +35,7 @@ export default function App() {
           </Route>
           <Route path="config" element={<Navigate to="/ibm-mq" replace />} />
           <Route path="queues" element={<Navigate to="/ibm-mq/queues" replace />} />
+          <Route path="amq" element={<AmqPage />} />
           <Route path="coherence" element={<CoherencePage />} />
           <Route path="msk" element={<MskPage />} />
         </Route>

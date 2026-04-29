@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Server, FileSearch, ServerCog, Layers } from 'lucide-react';
+import { LayoutDashboard, Server, FileSearch, ServerCog, Layers, Radio } from 'lucide-react';
 import { useConnectionStore } from '../../store/connectionStore';
 import clsx from 'clsx';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/ibm-mq', label: 'IBM MQ', icon: Server, exact: false },
+  { to: '/amq', label: 'AMQ', icon: Radio, exact: false },
   { to: '/coherence', label: 'Coherence', icon: ServerCog, exact: false },
   { to: '/msk', label: 'MSK Kafka', icon: Layers, exact: false },
 ];

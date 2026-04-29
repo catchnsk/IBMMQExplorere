@@ -2,7 +2,8 @@ import axios from 'axios';
 import type { ApiResponse, MqConnectionRequest, MqConnectionResponse, MqTestConnectionRequest,
   QueueInfoResponse, MessageSummaryResponse, MessageDetailResponse, AuditLogEntry,
   CoherenceServerRequest, CoherenceServerResponse, CoherenceStatusResponse,
-  MskConfigRequest, MskConfigResponse, KafkaTopicInfo, KafkaMessageRecord } from '../types';
+  MskConfigRequest, MskConfigResponse, KafkaTopicInfo, KafkaMessageRecord,
+  AmqServerRequest, AmqServerResponse, AmqQueueInfo, AmqStatusResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -97,6 +98,30 @@ export const mqApi = {
       api.get<ApiResponse<KafkaMessageRecord[]>>(
         `/msk/configs/${configId}/topics/${encodeURIComponent(topic)}/messages?limit=${limit}`
       ),
+  },
+
+  // AMQ ActiveMQ servers
+  amq: {
+    listServers: () =>
+      api.get<ApiResponse<AmqServerResponse[]>>('/amq/servers'),
+    createServer: (data: AmqServerRequest) =>
+      api.post<ApiResponse<AmqServerResponse>>('/amq/servers', data),
+    updateServer: (id: number, data: AmqServerRequest) =>
+      api.put<ApiResponse<AmqServerResponse>>(`/amq/servers/${id}`, data),
+    deleteServer: (id: number) =>
+      api.delete<ApiResponse<void>>(`/amq/servers/${id}`),
+    listQueues: (id: number) =>
+      api.get<ApiResponse<AmqQueueInfo[]>>(`/amq/servers/${id}/queues`),
+    checkStatus: (id: number) =>
+      api.get<ApiResponse<AmqStatusResponse>>(`/amq/servers/${id}/status`),
+    stopService: (id: number) =>
+      api.post<ApiResponse<AmqStatusResponse>>(`/amq/servers/${id}/stop`),
+    startService: (id: number) =>
+      api.post<ApiResponse<AmqStatusResponse>>(`/amq/servers/${id}/start`),
+    testConnection: (data: AmqServerRequest) =>
+      api.post<ApiResponse<string>>('/amq/servers/test-connection', data),
+    testSsh: (data: AmqServerRequest) =>
+      api.post<ApiResponse<string>>('/amq/servers/test-ssh', data),
   },
 
   // Coherence servers

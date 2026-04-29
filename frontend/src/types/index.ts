@@ -196,6 +196,70 @@ export interface CoherenceStatusResponse {
   checkedAt: string;
 }
 
+// ── AMQ ActiveMQ types ─────────────────────────────────────────────────────
+
+export type AmqEnvironment = 'QA' | 'QA03' | 'PERF';
+export type AmqGroupCategory = 'GROUP_A' | 'GROUP_B';
+export type AmqBrokerType = 'CLASSIC' | 'ARTEMIS';
+
+export interface AmqServerRequest {
+  displayName: string;
+  host: string;
+  managementPort?: number;
+  username?: string;
+  password?: string;
+  sshPort?: number;
+  sshUsername?: string;
+  sshPassword?: string;
+  instanceUser?: string;
+  instanceName?: string;
+  environment: AmqEnvironment;
+  groupCategory: AmqGroupCategory;
+  brokerType?: AmqBrokerType;
+  useSsl?: boolean;
+}
+
+export interface AmqServerResponse {
+  id: number;
+  displayName: string;
+  host: string;
+  managementPort: number;
+  username?: string;
+  hasPassword: boolean;
+  sshPort: number;
+  sshUsername?: string;
+  hasSshPassword: boolean;
+  instanceUser?: string;
+  instanceName?: string;
+  binDir: string;
+  environment: AmqEnvironment;
+  groupCategory: AmqGroupCategory;
+  brokerType: AmqBrokerType;
+  useSsl: boolean;
+  enabled: boolean;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export type AmqServiceStatus = 'RUNNING' | 'STOPPED' | 'UNKNOWN' | 'ERROR';
+
+export interface AmqStatusResponse {
+  serverId: number;
+  host: string;
+  status: AmqServiceStatus;
+  details?: string;
+  checkedAt: string;
+}
+
+export interface AmqQueueInfo {
+  name: string;
+  queueSize?: number;
+  consumerCount?: number;
+  producerCount?: number;
+  enqueueCount?: number;
+  dequeueCount?: number;
+}
+
 export interface AuditLogEntry {
   id: number;
   username: string;
