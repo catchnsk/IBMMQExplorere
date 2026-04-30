@@ -257,14 +257,17 @@ public class MskKafkaService {
 
         IAM_LOCK.lock();
         try {
-            String prevAccessKey    = System.getProperty("aws.accessKeyId");
-            String prevSecretKey    = System.getProperty("aws.secretAccessKey");
-            String prevSessionToken = System.getProperty("aws.sessionToken");
+            String prevAccessKey     = System.getProperty("aws.accessKeyId");
+            String prevSecretKey     = System.getProperty("aws.secretKey");        // SDK v1
+            String prevSecretKeyV2   = System.getProperty("aws.secretAccessKey"); // SDK v2 / CLI
+            String prevSessionToken  = System.getProperty("aws.sessionToken");
 
-            System.setProperty("aws.accessKeyId",
-                encryptionService.decrypt(config.getEncryptedAccessKey()));
-            System.setProperty("aws.secretAccessKey",
-                encryptionService.decrypt(config.getEncryptedSecretKey()));
+            String accessKey  = encryptionService.decrypt(config.getEncryptedAccessKey());
+            String secretKey  = encryptionService.decrypt(config.getEncryptedSecretKey());
+
+            System.setProperty("aws.accessKeyId",     accessKey);
+            System.setProperty("aws.secretKey",       secretKey); // SDK v1 (aws-msk-iam-auth uses this)
+            System.setProperty("aws.secretAccessKey", secretKey); // SDK v2
 
             boolean hasToken = config.getEncryptedSessionToken() != null
                 && !config.getEncryptedSessionToken().isBlank();
@@ -278,8 +281,9 @@ public class MskKafkaService {
             try {
                 return supplier.getUnchecked();
             } finally {
-                restoreProperty("aws.accessKeyId",    prevAccessKey);
-                restoreProperty("aws.secretAccessKey", prevSecretKey);
+                restoreProperty("aws.accessKeyId",     prevAccessKey);
+                restoreProperty("aws.secretKey",       prevSecretKey);
+                restoreProperty("aws.secretAccessKey", prevSecretKeyV2);
                 restoreProperty("aws.sessionToken",    prevSessionToken);
             }
         } finally {
