@@ -71,4 +71,7 @@ public class MqConfigurationEntity {
 
     @Column(length = 100)
     private String createdBy;
+
+    @Column(columnDefinition = "TEXT")
+    private String monitoredQueueNames;
 }

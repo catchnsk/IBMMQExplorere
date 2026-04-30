@@ -45,6 +45,7 @@ public class MqConfigController {
             .keystorePath(request.getKeystorePath())
             .truststorePath(request.getTruststorePath())
             .sslEnabled(request.getSslEnabled() != null ? request.getSslEnabled() : false)
+            .monitoredQueueNames(request.getMonitoredQueueNames())
             .createdBy(auth.getName())
             .build();
 
@@ -113,6 +114,7 @@ public class MqConfigController {
             .createdAt(e.getCreatedAt())
             .updatedAt(e.getUpdatedAt())
             .createdBy(e.getCreatedBy())
+            .monitoredQueueNames(e.getMonitoredQueueNames())
             .build();
     }
 

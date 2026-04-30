@@ -24,6 +24,7 @@ export interface MqConnectionResponse {
   createdAt: string;
   updatedAt?: string;
   createdBy?: string;
+  monitoredQueueNames?: string;
 }
 
 export interface MqConnectionRequest {
@@ -39,6 +40,7 @@ export interface MqConnectionRequest {
   keystorePath?: string;
   truststorePath?: string;
   sslEnabled?: boolean;
+  monitoredQueueNames?: string;
 }
 
 export interface MqTestConnectionRequest {

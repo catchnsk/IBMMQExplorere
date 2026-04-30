@@ -31,4 +31,5 @@ public class MqConnectionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
+    private String monitoredQueueNames;
 }

@@ -48,7 +48,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MQException.class)
     public ResponseEntity<ApiResponse<Void>> handleMqException(MQException ex, HttpServletRequest req) {
         log.error("Unhandled MQ exception on {}: reason={}", req.getRequestURI(), ex.getReason());
-        String message = "MQ Error (MQRC " + ex.getReason() + ")";
+        if (ex.getReason() == 2035) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(
+                    "Not authorized (MQRC 2035). The user does not have the required MQ authority.", 2035));
+        }
+        String message = "MQ Error (MQRC " + ex.getReason() + "): " + ex.getMessage();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ApiResponse.error(message, ex.getReason()));
     }

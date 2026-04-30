@@ -11,6 +11,7 @@ const defaultForm: MqConnectionRequest = {
   queueManagerName: '', channel: 'SYSTEM.DEF.SVRCONN',
   username: '', password: '', sslCipherSpec: '',
   keystorePath: '', truststorePath: '', sslEnabled: false,
+  monitoredQueueNames: '',
 };
 
 export default function ConfigPage() {
@@ -91,6 +92,7 @@ export default function ConfigPage() {
       sslCipherSpec: config.sslCipherSpec ?? '',
       keystorePath: config.keystorePath ?? '', truststorePath: config.truststorePath ?? '',
       sslEnabled: config.sslEnabled,
+      monitoredQueueNames: config.monitoredQueueNames ?? '',
     });
     setShowSsl(config.sslEnabled);
     setStatus(null);
@@ -185,6 +187,26 @@ export default function ConfigPage() {
               {field('Truststore Path', 'truststorePath', 'text', '/path/to/truststore.jks')}
             </div>
           )}
+        </div>
+
+        <div>
+          <label className="label">
+            Monitored Queue Names
+            <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">
+              (used when PCF admin access is not available)
+            </span>
+          </label>
+          <textarea
+            className="input-field font-mono text-xs"
+            rows={4}
+            placeholder={"e.g.:\nTS2.C4700.REQUEST.QUEUE\nLQ.XMLM.RESPONSE.QUEUE"}
+            value={form.monitoredQueueNames ?? ''}
+            onChange={e => setForm(f => ({ ...f, monitoredQueueNames: e.target.value }))}
+          />
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            One queue name per line (or comma-separated). Exact names only — no wildcards.
+            When the connected user lacks PCF authority, only these queues will be listed.
+          </p>
         </div>
       </div>
 

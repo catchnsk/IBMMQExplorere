@@ -51,4 +51,6 @@ public class MqConnectionRequest {
 
     @Builder.Default
     private Boolean sslEnabled = false;
+
+    private String monitoredQueueNames;
 }

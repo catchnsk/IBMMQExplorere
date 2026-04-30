@@ -1,5 +1,7 @@
 package com.ibmexplorer.service;
 
+import com.ibm.mq.MQException;
+import com.ibm.mq.MQQueue;
 import com.ibm.mq.MQQueueManager;
 import com.ibm.mq.constants.CMQC;
 import com.ibm.mq.constants.CMQCFC;
@@ -8,6 +10,7 @@ import com.ibm.mq.headers.pcf.PCFMessage;
 import com.ibm.mq.headers.pcf.PCFMessageAgent;
 import com.ibmexplorer.dto.response.QueueInfoResponse;
 import com.ibmexplorer.entity.AuditLogEntity.AuditAction;
+import com.ibmexplorer.repository.MqConfigurationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class MqQueueService {
 
     private final MqConnectionService connectionService;
     private final AuditLogService auditLogService;
+    private final MqConfigurationRepository configRepo;
 
     public List<QueueInfoResponse> listQueues(Long configId, String sessionId,
                                                boolean includeSystemQueues,
@@ -68,17 +73,119 @@ public class MqQueueService {
 
         } catch (PCFException e) {
             log.error("PCF error listing queues: reason={}", e.getReason(), e);
+            if (e.getReason() == 2035) {
+                List<String> monitored = getMonitoredQueueNames(configId);
+                if (!monitored.isEmpty()) {
+                    return fallbackDirect(qm, monitored, includeSystemQueues, configId, username, clientIp);
+                }
+                throw new com.ibmexplorer.exception.MqAuthorizationException(pcfAuthMessage());
+            }
             throw new com.ibmexplorer.exception.MqConnectionException(e.getReason(),
-                "Failed to list queues via PCF. Check that the SYSTEM.ADMIN.SVRCONN channel is available. MQRC: " + e.getReason());
+                "PCF command failed (MQRC " + e.getReason() + ").");
         } catch (Exception e) {
             log.error("Unexpected error listing queues", e);
             if (e instanceof com.ibmexplorer.exception.MqConnectionException mce) throw mce;
+            if (e instanceof com.ibmexplorer.exception.MqAuthorizationException mae) throw mae;
+            Throwable cause = e;
+            while (cause != null) {
+                if (cause instanceof MQException mqe && mqe.getReason() == 2035) {
+                    List<String> monitored = getMonitoredQueueNames(configId);
+                    if (!monitored.isEmpty()) {
+                        return fallbackDirect(qm, monitored, includeSystemQueues, configId, username, clientIp);
+                    }
+                    throw new com.ibmexplorer.exception.MqAuthorizationException(pcfAuthMessage());
+                }
+                cause = cause.getCause();
+            }
             throw new RuntimeException("Failed to list queues: " + e.getMessage(), e);
         } finally {
             if (agent != null) {
                 try { agent.disconnect(); } catch (Exception ignored) {}
             }
         }
+    }
+
+    private List<QueueInfoResponse> fallbackDirect(MQQueueManager qm, List<String> queueNames,
+                                                    boolean includeSystemQueues,
+                                                    Long configId, String username, String clientIp) {
+        log.info("PCF not authorized — falling back to direct MQINQ for {} configured queues", queueNames.size());
+        List<QueueInfoResponse> queues = listQueuesDirect(qm, queueNames, includeSystemQueues);
+        queues.sort(Comparator.comparing(QueueInfoResponse::getName));
+        auditLogService.log(username, AuditAction.VIEW_QUEUES, null,
+            "Listed " + queues.size() + " queues (direct mode)", "SUCCESS", null, clientIp);
+        return queues;
+    }
+
+    private List<QueueInfoResponse> listQueuesDirect(MQQueueManager qm, List<String> queueNames,
+                                                      boolean includeSystemQueues) {
+        List<QueueInfoResponse> result = new ArrayList<>();
+        for (String rawName : queueNames) {
+            String name = rawName.trim();
+            if (name.isBlank()) continue;
+            if (!includeSystemQueues && (name.startsWith("SYSTEM.") || name.startsWith("AMQ."))) continue;
+
+            MQQueue queue = null;
+            try {
+                queue = qm.accessQueue(name, CMQC.MQOO_INQUIRE);
+
+                // Selectors: integer attrs first (MQIA_*), then char attrs (MQCA_*)
+                int[] selectors = {
+                    CMQC.MQIA_CURRENT_Q_DEPTH,   // intAttrs[0]
+                    CMQC.MQIA_MAX_Q_DEPTH,        // intAttrs[1]
+                    CMQC.MQIA_OPEN_INPUT_COUNT,   // intAttrs[2]
+                    CMQC.MQIA_OPEN_OUTPUT_COUNT,  // intAttrs[3]
+                    CMQC.MQIA_Q_TYPE,             // intAttrs[4]
+                    CMQC.MQIA_INHIBIT_GET,        // intAttrs[5]
+                    CMQC.MQIA_INHIBIT_PUT,        // intAttrs[6]
+                    CMQC.MQCA_Q_DESC              // charAttrs[0]
+                };
+                int[] intAttrs  = new int[7];
+                char[] charAttrs = new char[64]; // MQCA_Q_DESC is 64 chars
+                queue.inquire(selectors, intAttrs, charAttrs);
+
+                result.add(QueueInfoResponse.builder()
+                    .name(name)
+                    .type(mapQueueType(intAttrs[4]))
+                    .currentDepth(intAttrs[0])
+                    .maxDepth(intAttrs[1])
+                    .openInputCount(intAttrs[2])
+                    .openOutputCount(intAttrs[3])
+                    .description(new String(charAttrs).trim())
+                    .getInhibited(intAttrs[5] == CMQC.MQQA_GET_INHIBITED)
+                    .putInhibited(intAttrs[6] == CMQC.MQQA_PUT_INHIBITED)
+                    .build());
+
+            } catch (MQException e) {
+                log.warn("Cannot inquire queue '{}': reason={}", name, e.getReason());
+            } finally {
+                if (queue != null) {
+                    try { queue.close(); } catch (Exception ignored) {}
+                }
+            }
+        }
+        return result;
+    }
+
+    private List<String> getMonitoredQueueNames(Long configId) {
+        return configRepo.findById(configId)
+            .map(c -> c.getMonitoredQueueNames())
+            .filter(s -> s != null && !s.isBlank())
+            .map(s -> Arrays.asList(s.split("[,\n]+")))
+            .orElse(List.of())
+            .stream()
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toList());
+    }
+
+    private static String pcfAuthMessage() {
+        return "The connected user does not have authority to issue PCF commands (MQRC 2035). "
+            + "An MQ administrator must grant the following on the queue manager:\n"
+            + "  setmqaut -m <QM> -t qmgr   -p <user> +connect +inq\n"
+            + "  setmqaut -m <QM> -t queue  -n SYSTEM.ADMIN.COMMAND.QUEUE -p <user> +put\n"
+            + "  setmqaut -m <QM> -t queue  -n SYSTEM.DEFAULT.MODEL.QUEUE -p <user> +get +browse\n"
+            + "Alternatively, add the user to the 'mqm' group (full admin access).\n"
+            + "Or configure Monitored Queue Names in the connection settings to use direct read-only access.";
     }
 
     private QueueInfoResponse mapToQueueInfo(PCFMessage response) {
